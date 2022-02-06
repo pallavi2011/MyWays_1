@@ -7,9 +7,10 @@ const Blog = require('../../models/Blog');
 const multer = require('multer');
 
 
+
 const storage = multer.diskStorage({
     destination: function(req, file, callback){
-        callback(null, './uploads/images');
+        callback(null, './uploads/');
     },
     filename: function(req, file, callback){
         callback(null, file.originalname)
@@ -25,7 +26,7 @@ const upload = multer({
 })
 // @route POST /api/blog
 // @desc Create a blog
-router.post('/',upload.single('image'),[auth, [
+router.post('/',upload.single('blogImage'),[auth, [
     check('text','Text is required').not().isEmpty(),
     check('title','Title is required').not().isEmpty()
 ]],  async (req, res) => {
@@ -55,6 +56,44 @@ router.post('/',upload.single('image'),[auth, [
 });
 
 
+
+// Edit Blog
+// @route PUT /api/blog/edit/:id
+// @desc Update a blog
+router.patch('/edit/:id',upload.single('blogImage'),[auth, [
+    check('text','Text is required').not().isEmpty(),
+    check('title','Title is required').not().isEmpty()
+]],  async (req, res) => {
+            const errors = validationResult(req);
+            if(!errors.isEmpty()){
+                return res.status(400).json({errors: errors.array()});
+            }
+            const {text, title} = req.body;
+            const image = req.file.originalname;
+
+            const blogfields = {};
+            blogfields.user = req.user.id;
+            if(title) blogfields.title = title;
+            if(text) blogfields.text = text;
+            if(image) blogfields.image = image;
+
+            
+
+            try{
+                const blog = await Blog.findByIdAndUpdate({_id: req.params.id},
+                    {$set: blogfields},
+                    {new: true});
+                res.status(200).json(blog);
+            
+            }catch(err){
+                res.status(500).send('Server error');
+            }
+
+});
+
+
+
+
 // @route GET /api/blog
 // @desc Get all blogs
 router.get('/',auth,  async (req, res) => {
@@ -68,7 +107,7 @@ router.get('/',auth,  async (req, res) => {
 });
 
 
-// @route GET /api/blog
+// @route GET /api/blog/:id
 // @desc Get blog by id
 router.get('/:id',auth,  async (req, res) => {
     try{
